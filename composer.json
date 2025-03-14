@@ -1,0 +1,35 @@
+{
+  "name": "rfuehricht/sanitizegp",
+  "type": "typo3-cms-extension",
+  "description": "Globally configure sanitizing actions for GET/POST parameters.",
+  "version": "1.0.0",
+  "license": [
+    "GPL-3.0-or-later"
+  ],
+  "authors": [
+    {
+      "name": "Reinhard Führicht",
+      "email": "r.fuehricht@gmail.com"
+    }
+  ],
+  "repositories": [
+    {
+      "type": "composer",
+      "url": "https://composer.typo3.org/"
+    }
+  ],
+  "require": {
+    "php": "^8.1",
+    "typo3/cms-backend": "~12.4 || ~13.4"
+  },
+  "autoload": {
+    "psr-4": {
+      "Rfuehricht\\Sanitizegp\\": "Classes/"
+    }
+  },
+  "extra": {
+    "typo3/cms": {
+      "extension-key": "sanitizegp"
+    }
+  }
+}
