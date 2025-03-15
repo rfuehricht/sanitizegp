@@ -35,11 +35,16 @@ final readonly class SanitizeGetPost implements MiddlewareInterface
             $configuration = $site->getConfiguration();
 
             if (isset($configuration['sanitizegp']) && is_array($configuration['sanitizegp'])) {
-                $getParameters = $request->getQueryParams();
-                $postParameters = $request->getParsedBody();
+                $getParameters = dot($request->getQueryParams());
+                $postParameters = dot($request->getParsedBody());
 
                 foreach ($configuration['sanitizegp'] as $parameter => $actions) {
-                    if ((isset($getParameters[$parameter]) || isset($postParameters[$parameter]))
+
+                    //Workaround as global wildcard doesn't work as key in YAML configuration
+                    if ($parameter === 'all') {
+                        $parameter = '*';
+                    }
+                    if (($getParameters->has($parameter) || $postParameters->has($parameter))
                         && is_array($actions)) {
                         foreach ($actions as $options) {
                             $action = $options['action'] ?? '';
@@ -52,6 +57,7 @@ final readonly class SanitizeGetPost implements MiddlewareInterface
                                     $className = 'Rfuehricht\\Sanitizegp\\Actions\\' . $className . 'Action';
                                 }
                                 $className = ltrim($className, '\\');
+
                                 /** @var AbstractAction $actionObject */
                                 $actionObject = GeneralUtility::makeInstance($className);
 
@@ -64,21 +70,58 @@ final readonly class SanitizeGetPost implements MiddlewareInterface
                                     $scope = strtolower($scope);
                                 }
 
-                                if (in_array('get', $options['scope']) && isset($getParameters[$parameter])) {
-                                    $getParameters[$parameter] = $actionObject->execute($getParameters[$parameter], $options);
+                                if (in_array('get', $options['scope']) && $getParameters->has($parameter)) {
+                                    $valuesToParse = $getParameters->get($parameter);
+                                    if (!is_array($valuesToParse)) {
+                                        $valuesToParse = [$valuesToParse];
+                                    }
+                                    $valuesToParse = $this->performAction($valuesToParse, $actionObject, $options);
+                                    if (count($valuesToParse) === 1) {
+                                        $valuesToParse = $valuesToParse[0];
+                                    }
+
+                                    if ($parameter === '*') {
+                                        $getParameters->setArray($valuesToParse);
+                                    } else {
+                                        $getParameters->set($parameter, $valuesToParse);
+                                    }
+
                                 }
-                                if (in_array('post', $options['scope']) && isset($postParameters[$parameter])) {
-                                    $postParameters[$parameter] = $actionObject->execute($postParameters[$parameter], $options);
+                                if (in_array('post', $options['scope']) && $postParameters->has($parameter)) {
+                                    $valuesToParse = $postParameters->get($parameter);
+                                    if (!is_array($valuesToParse)) {
+                                        $valuesToParse = [$valuesToParse];
+                                    }
+                                    $valuesToParse = $this->performAction($valuesToParse, $actionObject, $options);
+                                    if (count($valuesToParse) === 1) {
+                                        $valuesToParse = $valuesToParse[0];
+                                    }
+                                    if ($parameter === '*') {
+                                        $postParameters->setArray($valuesToParse);
+                                    } else {
+                                        $postParameters->set($parameter, $valuesToParse);
+                                    }
                                 }
                             }
                         }
                     }
                 }
-
-                $request = $request->withQueryParams($getParameters)->withParsedBody($postParameters);
+                $request = $request->withQueryParams($getParameters->all())
+                    ->withParsedBody($postParameters->all());
             }
         }
-
         return $handler->handle($request);
+    }
+
+    protected function performAction(array $valuesToParse, AbstractAction $actionObject, array $options): array
+    {
+        foreach ($valuesToParse as $key => &$value) {
+            if (is_array($value)) {
+                $value = $this->performAction($value, $actionObject, $options);
+            } else {
+                $valuesToParse[$key] = $actionObject->execute($value, $options);
+            }
+        }
+        return $valuesToParse;
     }
 }

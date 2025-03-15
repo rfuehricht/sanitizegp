@@ -20,7 +20,8 @@
   ],
   "require": {
     "php": "^8.1",
-    "typo3/cms-backend": "~12.4 || ~13.4"
+    "typo3/cms-backend": "~12.4 || ~13.4",
+    "pharaonic/php-dot-array": "^2"
   },
   "autoload": {
     "psr-4": {
