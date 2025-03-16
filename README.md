@@ -10,16 +10,13 @@ Configuration is done via site settings.
 ```
 sanitizegp:
   L:
-    -
-      action: convert
+    - action: convert
       type: int
-    -
-      action: range
+    - action: range
       lower: 0
       upper: 3
   parameter1:
-    -
-      action: htmlSpecialChars
+    - action: htmlSpecialChars
 ```
 
 Use pipe notation to access deep array parameters.
