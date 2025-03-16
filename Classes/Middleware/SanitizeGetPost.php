@@ -120,13 +120,13 @@ final readonly class SanitizeGetPost implements MiddlewareInterface
             }
 
             $valuesToParse = $this->performAction($valuesToParse, $actionObject, $options);
-            if (count($valuesToParse) === 1) {
-                $valuesToParse = $valuesToParse[0];
-            }
 
             if ($parameter === '*') {
                 $parameters->setArray($valuesToParse);
             } else {
+                if (count($valuesToParse) === 1) {
+                    $valuesToParse = $valuesToParse[0];
+                }
                 $parameters->set($parameter, $valuesToParse);
             }
         }

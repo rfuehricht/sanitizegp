@@ -80,9 +80,29 @@ Converts value to a specific data type.
 
 Calls `htmlspecialchars` on the value.
 
+### Length
+
+Makes sure a string value is in a length range.
+
+If only one limit is set, the other one is ignored.
+
+If value is shorter than `min`, the values is filled with content set in `padString` using PHP function `str_pad` (https://www.php.net/manual/function.str-pad.php).
+
+#### Options
+
+`min` The lower length limit.
+
+`max` The upper length limit.
+
+`padString` The content to fill up value shorter than `min`.
+
+`padType` Where to apply `padString`. Can be: `left`, `right`, `both`. Default is `right`.
+
 ### Range
 
 Makes sure a numeric value is in a certain range. If value is out of range, it will be set to the lower/upper as defined.
+
+If only one limit is set, the other one is ignored.
 
 #### Options
 
