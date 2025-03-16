@@ -91,6 +91,11 @@ final readonly class SanitizeGetPost implements MiddlewareInterface
                 }
                 $request = $request->withQueryParams($getParameters->all())
                     ->withParsedBody($postParameters->all());
+
+                if (isset($settings['replaceGlobals']) && boolval($settings['replaceGlobals']) === true) {
+                    $_GET = $getParameters->all();
+                    $_POST = $postParameters->all();
+                }
             }
         }
         return $handler->handle($request);

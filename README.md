@@ -17,6 +17,8 @@ sanitizegp:
       upper: 3
   parameter1:
     - action: htmlSpecialChars
+  tx_news|news:
+    - action: int
 ```
 
 Use pipe notation to access deep array parameters.
@@ -45,11 +47,14 @@ all:
 sanitizegp:
   settings:
     separator: '.'
+    replaceGlobals: 1
 ```
 
-Use key `settings` to specify global settings.
+### Available settings
 
-Currently, `separator` is the only available setting.
+`separator` is the separator to use for accessing deep array values. Default is `|`.
+
+`replaceGlobals` specifies if `$_GET` and `$_POST` should be replaced with the sanitized values or be left untouched. By default, only the values in the request object are sanitized.
 
 
 ## Available Actions
@@ -119,7 +124,7 @@ Replaces values in the value.
 
 `replaceFunction` Defaults to `str_ireplace`. Can be: `str_replace`, `str_ireplace`or `preg_replace`. When using `preg_replace`, the search and replacements are not exploded by the separator. Each line is treated as a regular expression.
 
-`separator`
+`separator` Specify custom separator for values in `search` and `replace`. Default is `,`.
 
 `fileSource` Path to file (absolute or relative from project root) containing the search/replacement infos.
 
