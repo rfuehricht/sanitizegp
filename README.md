@@ -154,3 +154,23 @@ Replacement with `preg_replace`:
     - 'good word'
     - 'my name is $1'
 ```
+
+### StripTags
+
+Calls `strip_tags` on the value.
+
+#### Options
+
+`allowedTags` Array of tags to keep
+
+Example:
+
+```yaml
+- action: StripTags
+  options:
+    allowedTags:
+      - b
+      - strong
+      - i
+      - em
+```
