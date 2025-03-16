@@ -7,7 +7,7 @@ This way you can ensure that basic checks are applied and integer values are con
 
 Configuration is done via site settings.
 
-```
+```yaml
 sanitizegp:
   L:
     - action: convert
@@ -41,7 +41,7 @@ all:
 
 ## Global Settings
 
-```
+```yaml
 sanitizegp:
   settings:
     separator: '.'
