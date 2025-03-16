@@ -22,13 +22,13 @@ sanitizegp:
       action: htmlSpecialChars
 ```
 
-Use dot notation to access deep array parameters.
+Use pipe notation to access deep array parameters.
 You can use wildcard `*` to access all deep values.
 Use keyword `all` to perform actions on **all** parameters.
 
 Examples:
 ```yaml
-array.*:
+array|*:
 - action: range
   lower: 1
   upper: 3
@@ -41,6 +41,20 @@ Perform actions on **all** parameters:
 all:
 - action: htmlSpecialChars
 ```
+
+## Global Settings
+
+```
+sanitizegp:
+  settings:
+    separator: '.'
+```
+
+Use key `settings` to specify global settings.
+
+Currently, `separator` is the only available setting.
+
+
 ## Available Actions
 
 Each action has the option `scope` to define if only `get` or `post`should be processed.
