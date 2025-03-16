@@ -21,6 +21,9 @@ use Traversable;
  */
 class SeparatorArrayAccess implements ArrayAccess, Countable, IteratorAggregate, JsonSerializable
 {
+
+    protected string $separator = '.';
+
     /**
      * Array Items
      *
@@ -32,13 +35,16 @@ class SeparatorArrayAccess implements ArrayAccess, Countable, IteratorAggregate,
      * Create an new DoArray instance
      *
      * @param ?array $items
+     * @param string $separator
      */
-    public function __construct(?array $items = [])
+    public function __construct(?array $items = [], string $separator = '.')
     {
         if ($items === null) {
             $items = [];
         }
         $this->setArray($items);
+
+        $this->separator = $separator;
     }
 
     /**
@@ -52,6 +58,16 @@ class SeparatorArrayAccess implements ArrayAccess, Countable, IteratorAggregate,
         $this->_ITEMS = $items;
     }
 
+    public function getSeparator(): string
+    {
+        return $this->separator;
+    }
+
+    public function setSeparator(string $separator): void
+    {
+        $this->separator = $separator;
+    }
+
     /**
      * Clear all stored items
      *
@@ -63,15 +79,89 @@ class SeparatorArrayAccess implements ArrayAccess, Countable, IteratorAggregate,
     }
 
     /**
-     * Return the value of a given key as JSON
+     * Get all the stored items
      *
-     * @param int|string|null $key
-     * @param int $options
-     * @return  string
+     * @return array
      */
-    public function toJson(int|string $key = null, int $options = 0): string
+    public function all(): array
     {
-        return json_encode($key ? $this->get($key ?? '*') : $this->all(), $options);
+        return $this->_ITEMS;
+    }
+
+    /**
+     * Check if a given key exists
+     *
+     * @param mixed $offset
+     * @return bool
+     */
+    public function offsetExists(mixed $offset): bool
+    {
+        return $this->has($offset);
+    }
+
+    /**
+     * Check if a given key exists
+     *
+     * @param string|int $key
+     * @param array|null $arr
+     * @return  bool
+     */
+    public function has(string|int $key, array $arr = null): bool
+    {
+        $items = $arr ?? $this->_ITEMS;
+
+        if (is_int($key) && isset($items[$key])) {
+            return true;
+        } elseif (is_string($key)) {
+            $key = $this->prepareKey($key);
+            for ($index = 0; $index < count($key); $index++) {
+                if (is_array($items)) {
+                    if ($key[$index] == '*') {
+                        $index++;
+                        $next_key = implode($this->separator, array_slice($key, $index));
+
+                        foreach ($items as $item)
+                            if (!$this->has($next_key, $item)) return false;
+
+                        break;
+                    } else {
+                        if (!array_key_exists($key[$index], $items)) return false;
+                        $items = $items[$key[$index]];
+                    }
+                } else {
+                    return false;
+                }
+            }
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Prepare Key to Array of Keys
+     *
+     * @param string $key
+     * @return array
+     */
+    private function prepareKey(string $key): array
+    {
+        $key = rtrim(
+            trim($key, $this->separator . ' '),
+            $this->separator . '*'
+        );
+
+        return empty($key) ? [] : explode($this->separator, $key);
+    }
+
+    /**
+     * Return the value of a given key
+     *
+     * @param mixed $offset
+     * @return mixed
+     */
+    public function offsetGet(mixed $offset): mixed
+    {
+        return $this->get($offset);
     }
 
     /**
@@ -87,7 +177,7 @@ class SeparatorArrayAccess implements ArrayAccess, Countable, IteratorAggregate,
         $items = $arr ?? $this->_ITEMS;
 
         if (is_int($key)) {
-            return isset($items[$key]) ? $items[$key] : $default;
+            return $items[$key] ?? $default;
         } else {
             $key = $this->prepareKey($key);
             $max = count($key) - 1;
@@ -99,10 +189,10 @@ class SeparatorArrayAccess implements ArrayAccess, Countable, IteratorAggregate,
                     }
 
                     $index++;
-                    $next_key = implode('.', array_slice($key, $index));
+                    $next_key = implode($this->separator, array_slice($key, $index));
                     $rs = null;
 
-                    foreach ($items as $k => $item) {
+                    foreach ($items as $item) {
                         $item = $this->get($next_key, $default, $item);
                         $rs[] = $item;
                     }
@@ -115,8 +205,8 @@ class SeparatorArrayAccess implements ArrayAccess, Countable, IteratorAggregate,
             }
 
             // if multidimensional
-            if (is_array($items) && $this->isMultidimensional($items) && $this->isNumericKeys($items) && $index = $max) {
-                if (isset($items[0][0]) && \is_array($items[0][0]))
+            if (is_array($items) && $this->isMultidimensional($items) && $this->isNumericKeys($items) && $index == $max) {
+                if (isset($items[0][0]) && is_array($items[0][0]))
                     foreach ($items as &$item) {
                         $item = array_merge_recursive(...$item);
                     }
@@ -124,28 +214,12 @@ class SeparatorArrayAccess implements ArrayAccess, Countable, IteratorAggregate,
                 $items = array_merge_recursive(...$items);
             }
 
-            if (is_array($items) && $this->isNulledValues($items)) {
+            if (is_array($items) && $this->isNullValues($items)) {
                 $items = null;
             }
 
             return is_null($items) ? $default : $items;
         }
-    }
-
-    /**
-     * Prepare Key to Array of Keys
-     *
-     * @param string $key
-     * @return array
-     */
-    private function prepareKey(string $key): array
-    {
-        $key = rtrim(
-            trim($key, '. '),
-            '.*'
-        );
-
-        return empty($key) ? [] : explode('.', $key);
     }
 
     /**
@@ -176,7 +250,7 @@ class SeparatorArrayAccess implements ArrayAccess, Countable, IteratorAggregate,
      * @param array $arr
      * @return boolean
      */
-    public function isNulledValues(array $arr): bool
+    public function isNullValues(array $arr): bool
     {
         return empty(array_filter($arr, function ($v) {
             return $v !== null;
@@ -184,100 +258,31 @@ class SeparatorArrayAccess implements ArrayAccess, Countable, IteratorAggregate,
     }
 
     /**
-     * Get all the stored items
-     *
-     * @return array
-     */
-    public function all(): array
-    {
-        return $this->_ITEMS;
-    }
-
-    /**
-     * Check if a given key exists
-     *
-     * @param mixed $key
-     * @return bool
-     */
-    public function offsetExists(mixed $key): bool
-    {
-        return $this->has($key);
-    }
-
-    /**
-     * Check if a given key exists
-     *
-     * @param string|int $key
-     * @param array|null $arr
-     * @return  bool
-     */
-    public function has(string|int $key, array $arr = null): bool
-    {
-        $items = $arr ?? $this->_ITEMS;
-
-        if (is_int($key) && isset($items[$key])) {
-            return true;
-        } elseif (is_string($key)) {
-            $key = $this->prepareKey($key);
-            for ($index = 0; $index < count($key); $index++) {
-                if (is_array($items)) {
-                    if ($key[$index] == '*') {
-                        $index++;
-                        $next_key = implode('.', array_slice($key, $index));
-
-                        foreach ($items as $item)
-                            if (!$this->has($next_key, $item)) return false;
-
-                        break;
-                    } else {
-                        if (!array_key_exists($key[$index], $items)) return false;
-                        $items = $items[$key[$index]];
-                    }
-                } else {
-                    return false;
-                }
-            }
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * Return the value of a given key
-     *
-     * @param mixed $key
-     * @return mixed
-     */
-    public function offsetGet(mixed $key): mixed
-    {
-        return $this->get($key);
-    }
-
-    /**
      * Set a given value to the given key
      *
-     * @param int|string $key
+     * @param mixed $offset
      * @param mixed $value
      * @return void
      */
-    public function offsetSet($key, $value): void
+    public function offsetSet(mixed $offset, mixed $value): void
     {
-        if (is_null($key)) {
+        if (is_null($offset)) {
             $this->_ITEMS[] = $value;
             return;
         }
 
-        $this->set($key, $value);
+        $this->set($offset, $value);
     }
 
     /**
      * Set a given value to the given key
      *
-     * @param string $key
+     * @param mixed $key
      * @param array|int|float|string|null $value
+     * @param array|null $arr
      * @return  void
      */
-    public function set(string $key, mixed $value = null, array &$arr = null)
+    public function set(mixed $key, mixed $value = null, array &$arr = null): void
     {
         if (!$arr) {
             $items = &$this->_ITEMS;
@@ -287,7 +292,6 @@ class SeparatorArrayAccess implements ArrayAccess, Countable, IteratorAggregate,
 
         if (is_int($key)) {
             $items[$key] = $value;
-            return;
         } elseif (is_string($key)) {
             $key = $this->prepareKey($key);
             $max = count($key) - 1;
@@ -298,7 +302,7 @@ class SeparatorArrayAccess implements ArrayAccess, Countable, IteratorAggregate,
                 } else {
                     if ($key[$index] == '*') {
                         $index++;
-                        $next_key = implode('.', array_slice($key, $index));
+                        $next_key = implode($this->separator, array_slice($key, $index));
 
                         if (empty($items)) {
                             $items[][$key[$index]] = null;
@@ -324,18 +328,19 @@ class SeparatorArrayAccess implements ArrayAccess, Countable, IteratorAggregate,
     /**
      * Delete the given key
      *
-     * @param int|string $key
+     * @param int|string $offset
      * @return void
      */
-    public function offsetUnset($key): void
+    public function offsetUnset($offset): void
     {
-        $this->delete($key);
+        $this->delete($offset);
     }
 
     /**
      * Delete the given key
      *
      * @param string|int $key
+     * @param array|null $arr
      * @return  bool
      */
     public function delete(string|int $key, array &$arr = null): bool
@@ -362,7 +367,7 @@ class SeparatorArrayAccess implements ArrayAccess, Countable, IteratorAggregate,
                 } else {
                     if ($key[$index] == '*') {
                         $index++;
-                        $next_key = implode('.', array_slice($key, $index));
+                        $next_key = implode($this->separator, array_slice($key, $index));
                         $rs = true;
 
                         foreach ($items as &$item) {
@@ -385,10 +390,10 @@ class SeparatorArrayAccess implements ArrayAccess, Countable, IteratorAggregate,
     /**
      * Return the number of items in a given key
      *
-     * @param string|null $key
+     * @param mixed $key
      * @return  int
      */
-    public function count($key = null): int
+    public function count(mixed $key = null): int
     {
         return count($this->get($key ?? '*'));
     }
@@ -414,5 +419,3 @@ class SeparatorArrayAccess implements ArrayAccess, Countable, IteratorAggregate,
     }
 
 }
-
-;

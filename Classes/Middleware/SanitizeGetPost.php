@@ -36,22 +36,30 @@ final readonly class SanitizeGetPost implements MiddlewareInterface
             $configuration = $site->getConfiguration();
 
             if (isset($configuration['sanitizegp']) && is_array($configuration['sanitizegp'])) {
-                $getParameters = new SeparatorArrayAccess($request->getQueryParams());
-                $postParameters = new SeparatorArrayAccess($request->getParsedBody());
+
+                $settings = $configuration['sanitizegp']['settings'] ?? [];
+                unset($configuration['sanitizegp']['settings']);
+
+                $separator = $settings['separator'] ?? '|';
+
+                $getParameters = new SeparatorArrayAccess($request->getQueryParams(), $separator);
+                $postParameters = new SeparatorArrayAccess($request->getParsedBody(), $separator);
+
 
                 foreach ($configuration['sanitizegp'] as $parameter => $actions) {
+
 
                     //Workaround as global wildcard doesn't work as key in YAML configuration
                     if ($parameter === 'all') {
                         $parameter = '*';
                     }
+
                     if (($getParameters->has($parameter) || $postParameters->has($parameter))
                         && is_array($actions)) {
                         foreach ($actions as $options) {
                             $action = $options['action'] ?? '';
                             if (strlen(trim($action)) > 0) {
                                 $actionObject = $this->getActionObject($action);
-
 
                                 if (!isset($options['scope']) || !is_array($options['scope'])) {
                                     $options['scope'] = ['get', 'post'];
